@@ -1,0 +1,13 @@
+{
+  "activeConnectionId": "connection-1780646487392",
+  "connections": [
+    {
+      "id": "connection-1780646487392",
+      "name": "test-openai",
+      "provider": "openai",
+      "model": "gpt-5.4",
+      "apiUrl": "https://vm7608.io.vn/v1",
+      "apiKey": "sk-RGCFFN7AHWCPwBtzA-tiennt"
+    }
+  ]
+}

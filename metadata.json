@@ -1,0 +1,6 @@
+{
+  "name": "LingoMinds AI",
+  "description": "A smart vocabulary learning application powered by AI. Create topic notebooks, add words, and auto-generate parts of speech, diverse examples, and related word families.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
