@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { readProviderConnections, writeProviderConnections } from "../storage/providerConnectionStore";
 import { discoverModels } from "../services/modelDiscoveryService";
+import { terminalLogger } from "../logging/TerminalLogger";
 
 export function createProviderConnectionsRoutes() {
   const router = Router();
@@ -11,6 +12,7 @@ export function createProviderConnectionsRoutes() {
       return res.json(state);
     } catch (error: any) {
       console.error("Load provider connections error:", error);
+      terminalLogger.logRequestError({ requestId: _req.requestId || "unknown", method: _req.method, path: _req.originalUrl, error });
       return res.status(500).json({ error: error?.message || "Failed to load provider connections" });
     }
   });
@@ -26,6 +28,7 @@ export function createProviderConnectionsRoutes() {
       return res.json(state);
     } catch (error: any) {
       console.error("Save provider connections error:", error);
+      terminalLogger.logRequestError({ requestId: req.requestId || "unknown", method: req.method, path: req.originalUrl, error, body: req.body });
       return res.status(500).json({ error: error?.message || "Failed to save provider connections" });
     }
   });
@@ -41,6 +44,7 @@ export function createProviderConnectionsRoutes() {
       return res.json(result);
     } catch (error: any) {
       console.error("Discover models error:", error);
+      terminalLogger.logRequestError({ requestId: req.requestId || "unknown", method: req.method, path: req.originalUrl, error, body: req.body });
       return res.status(500).json({ error: error?.message || "Failed to discover models" });
     }
   });

@@ -5,6 +5,15 @@ import { InteractiveSentence } from "./InteractiveSentence";
 import { AnalyzedSentence } from "./AnalyzedSentence";
 import { AppSettings } from "../useSettings";
 
+async function parseJsonResponse(response: Response) {
+  const text = await response.text();
+  if (!text.trim()) {
+    return null;
+  }
+
+  return JSON.parse(text);
+}
+
 interface NotebookDetailProps {
   notebook: Notebook;
   settings: AppSettings;
@@ -57,11 +66,11 @@ const NotebookDetail: React.FC<NotebookDetailProps> = ({
         }),
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch word details");
-      }
+      const data = await parseJsonResponse(response);
 
-      const data = await response.json();
+      if (!response.ok) {
+        throw new Error((data as any)?.error || "Failed to fetch word details");
+      }
       
       const newEntry: WordEntry = {
         ...data,

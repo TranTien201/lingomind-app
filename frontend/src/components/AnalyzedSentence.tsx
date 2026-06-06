@@ -3,6 +3,15 @@ import { ExampleSentence, GrammarChunk, WordEntry } from '../types';
 import { Loader2, Wand2 } from 'lucide-react';
 import { AppSettings } from '../useSettings';
 
+async function parseJsonResponse(response: Response) {
+  const text = await response.text();
+  if (!text.trim()) {
+    return null;
+  }
+
+  return JSON.parse(text);
+}
+
 interface Props {
   sentence: ExampleSentence;
   notebookWords: WordEntry[];
@@ -44,8 +53,12 @@ export const AnalyzedSentence: React.FC<Props> = ({ sentence, notebookWords, set
           apiKey: settings.apiKey
         })
       });
-      if (!res.ok) throw new Error('Analysis failed');
-      const data = await res.json();
+
+      const data = await parseJsonResponse(res);
+      if (!res.ok) {
+        throw new Error((data as any)?.error || 'Analysis failed');
+      }
+
       if (data.chunks) {
         onUpdateSentence({ ...sentence, chunks: data.chunks });
       }

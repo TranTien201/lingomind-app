@@ -4,6 +4,7 @@ import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
 import { createAiRoutes } from "./routes/aiRoutes";
 import { createProviderConnectionsRoutes } from "./routes/providerConnectionsRoutes";
+import { createRequestLoggingMiddleware } from "./logging/requestLoggingMiddleware";
 
 dotenv.config();
 
@@ -12,6 +13,7 @@ async function startServer() {
   const PORT = 3000;
 
   app.use(express.json());
+  app.use(createRequestLoggingMiddleware());
   app.use("/api", createAiRoutes());
   app.use("/api", createProviderConnectionsRoutes());
 

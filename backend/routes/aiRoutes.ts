@@ -12,7 +12,7 @@ export function createAiRoutes() {
         return res.status(400).json({ error: "Word is required" });
       }
 
-      const result = await aiService.lookupWord({ word, provider, model, apiUrl, apiKey });
+      const result = await aiService.lookupWord({ word, provider, model, apiUrl, apiKey, requestId: req.requestId });
       return res.json(result);
     } catch (error: any) {
       console.error("AI lookupWord error:", error);
@@ -27,7 +27,7 @@ export function createAiRoutes() {
         return res.status(400).json({ error: "English and Vietnamese sentencess are required" });
       }
 
-      const result = await aiService.analyzeSentence({ english, vietnamese, provider, model, apiUrl, apiKey });
+      const result = await aiService.analyzeSentence({ english, vietnamese, provider, model, apiUrl, apiKey, requestId: req.requestId });
       return res.json(result);
     } catch (error: any) {
       console.error("AI analyzeSentence error:", error);

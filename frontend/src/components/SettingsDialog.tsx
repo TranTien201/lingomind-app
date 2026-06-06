@@ -2,6 +2,15 @@ import React from 'react';
 import { Plus, Trash2, X } from 'lucide-react';
 import { useSettings, AppSettings } from '../useSettings';
 
+async function parseJsonResponse(response: Response) {
+  const text = await response.text();
+  if (!text.trim()) {
+    return null;
+  }
+
+  return JSON.parse(text);
+}
+
 interface Props {
   isOpen: boolean;
   onClose: () => void;
@@ -48,7 +57,7 @@ export const SettingsDialog: React.FC<Props> = ({ isOpen, onClose }) => {
         }),
       });
 
-      const data = await response.json();
+      const data = await parseJsonResponse(response);
       if (!response.ok) {
         throw new Error(data?.error || 'Không thể tải danh sách mô hình');
       }

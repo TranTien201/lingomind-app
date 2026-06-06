@@ -8,6 +8,7 @@ export interface ProviderContext {
   apiKey?: string;
   apiUrl?: string;
   model?: string;
+  requestId?: string;
 }
 
 export interface StructuredGenerationRequest {

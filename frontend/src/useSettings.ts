@@ -1,5 +1,14 @@
 import { useEffect, useState } from "react";
 
+async function parseJsonResponse(response: Response) {
+  const text = await response.text();
+  if (!text.trim()) {
+    return null;
+  }
+
+  return JSON.parse(text);
+}
+
 export interface AppSettings {
   provider: 'gemini' | 'litellm' | 'openai' | 'grok';
   model: string;
@@ -38,8 +47,8 @@ export const useSettings = () => {
       try {
         const response = await fetch('/api/provider-connections');
         if (!response.ok) throw new Error('Failed to load provider connections');
-        const saved = await response.json();
-        setConnectionState(normalizeConnectionState(saved));
+        const saved = await parseJsonResponse(response);
+        setConnectionState(normalizeConnectionState(saved || defaultConnectionState));
       } catch {
         setConnectionState(defaultConnectionState);
       } finally {
