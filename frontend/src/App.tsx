@@ -16,7 +16,7 @@ export default function App() {
     deleteWord,
     deleteNotebook,
     renameNotebook,
-    editWordTranslation,
+    editWordSenses,
     updateWord
   } = useNotebooks();
   
@@ -255,7 +255,7 @@ export default function App() {
               onAddWord={(word) => addWordToNotebook(activeNotebook.id, word)}
               onAddCustomExample={(wordId, example) => addCustomExample(activeNotebook.id, wordId, example)}
               onDeleteWord={(wordId) => deleteWord(activeNotebook.id, wordId)}
-              onEditTranslation={(wordId, newTranslation) => editWordTranslation(activeNotebook.id, wordId, newTranslation)}
+              onEditSenses={(wordId, senses) => editWordSenses(activeNotebook.id, wordId, senses)}
               onUpdateWord={(wordId, updated) => updateWord(activeNotebook.id, updated)}
             />
           ) : (
@@ -281,4 +281,3 @@ export default function App() {
     </div>
   );
 }
-

@@ -1,5 +1,5 @@
 import React, { useState, FormEvent } from "react";
-import { Notebook, WordEntry, ExampleSentence } from "../types";
+import { Notebook, WordEntry, ExampleSentence, WordSense } from "../types";
 import { Plus, Search, Sparkles, Loader2, Trash2, ArrowRight, Pencil } from "lucide-react";
 import { InteractiveSentence } from "./InteractiveSentence";
 import { AnalyzedSentence } from "./AnalyzedSentence";
@@ -20,7 +20,7 @@ interface NotebookDetailProps {
   onAddWord: (word: WordEntry) => void;
   onAddCustomExample: (wordId: string, example: ExampleSentence) => void;
   onDeleteWord: (wordId: string) => void;
-  onEditTranslation: (wordId: string, newTranslation: string) => void;
+  onEditSenses: (wordId: string, senses: WordSense[]) => void;
   onUpdateWord?: (wordId: string, updatedWord: WordEntry) => void;
 }
 
@@ -30,7 +30,7 @@ const NotebookDetail: React.FC<NotebookDetailProps> = ({
   onAddWord,
   onAddCustomExample,
   onDeleteWord,
-  onEditTranslation,
+  onEditSenses,
   onUpdateWord
 }) => {
   const [newWord, setNewWord] = useState("");
@@ -94,14 +94,18 @@ const NotebookDetail: React.FC<NotebookDetailProps> = ({
 
   const filteredWords = notebook.words.filter(w => 
     w.word.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    w.translation.toLowerCase().includes(searchQuery.toLowerCase())
+    w.senses.some((sense) =>
+      sense.meaning.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      sense.context.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      sense.note.toLowerCase().includes(searchQuery.toLowerCase())
+    )
   );
 
   return (
-    <div className="max-w-4xl mx-auto p-4 md:p-8">
+    <div className="max-w-4xl mx-auto p-4 md:p-8 pb-28 md:pb-10">
       {/* Lookup Bar */}
-      <div className="mb-8">
-        <form onSubmit={handleLookup} className="relative max-w-xl">
+      <div className="mb-8 sticky top-0 z-30 -mx-4 px-4 py-3 md:mx-0 md:px-0 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 border-b border-gray-100">
+        <form onSubmit={handleLookup} className="relative max-w-xl mx-auto md:mx-0">
           <input
             type="text"
             placeholder="Tra và thêm từ vựng mới..."
@@ -122,6 +126,32 @@ const NotebookDetail: React.FC<NotebookDetailProps> = ({
         </form>
         {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
       </div>
+
+      <form
+        onSubmit={handleLookup}
+        className="md:hidden fixed bottom-4 left-4 right-4 z-40 rounded-2xl border border-gray-200 bg-white/95 backdrop-blur shadow-2xl p-3"
+      >
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="Tra và thêm từ vựng mới..."
+            value={newWord}
+            onChange={(e) => {
+              setNewWord(e.target.value);
+              setError("");
+            }}
+            className="w-full pl-4 pr-12 py-3 bg-white border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-base"
+          />
+          <button
+            type="submit"
+            disabled={isLoading || !newWord.trim()}
+            className="absolute right-2 top-1.5 bottom-1.5 px-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-indigo-300 disabled:cursor-not-allowed flex items-center justify-center transition"
+            title="Thêm từ vựng"
+          >
+            {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
+          </button>
+        </div>
+      </form>
 
       {/* Word List Tools */}
       <div className="flex items-center justify-between mb-6">
@@ -161,7 +191,7 @@ const NotebookDetail: React.FC<NotebookDetailProps> = ({
               settings={settings}
               onAddCustomExample={(example) => onAddCustomExample(word.id, example)}
               onDelete={() => onDeleteWord(word.id)}
-              onEditTranslation={(newTranslation) => onEditTranslation(word.id, newTranslation)}
+              onEditSenses={(senses) => onEditSenses(word.id, senses)}
               onUpdateExample={(exId, updatedExample) => {
                 if (onUpdateWord) {
                    onUpdateWord(word.id, {
@@ -188,7 +218,7 @@ const WordCard: React.FC<{
   settings: AppSettings;
   onAddCustomExample: (ex: ExampleSentence) => void;
   onDelete: () => void;
-  onEditTranslation: (newTranslation: string) => void;
+  onEditSenses: (senses: WordSense[]) => void;
   onUpdateExample: (exId: string, updatedExamle: ExampleSentence) => void;
 }> = ({ 
   word, 
@@ -196,14 +226,17 @@ const WordCard: React.FC<{
   settings,
   onAddCustomExample,
   onDelete,
-  onEditTranslation,
+  onEditSenses,
   onUpdateExample
 }) => {
   const [customEng, setCustomEng] = useState("");
   const [customVie, setCustomVie] = useState("");
   const [isAddingEx, setIsAddingEx] = useState(false);
-  const [isEditingTranslation, setIsEditingTranslation] = useState(false);
-  const [editingTranslationValue, setEditingTranslationValue] = useState("");
+  const [isEditingSenses, setIsEditingSenses] = useState(false);
+  const [editingSensesValue, setEditingSensesValue] = useState("");
+  const uniquePartOfSpeechBadges = Array.from(
+    new Set(word.senses.map((sense) => sense.partOfSpeech.trim()).filter(Boolean))
+  );
 
   const handleAddExample = (e: FormEvent) => {
     e.preventDefault();
@@ -220,47 +253,82 @@ const WordCard: React.FC<{
     setIsAddingEx(false);
   };
 
+  const handleStartEditingSenses = () => {
+    setEditingSensesValue(
+      word.senses.map((sense) => `${sense.partOfSpeech} | ${sense.context} | ${sense.meaning} | ${sense.note}`).join("\n")
+    );
+    setIsEditingSenses(true);
+  };
+
+  const handleSaveSenses = () => {
+    const parsedSenses = editingSensesValue
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const [partOfSpeech, context, meaning, note] = line.split("|").map((part) => part?.trim() || "");
+        return { partOfSpeech, context, meaning, note };
+      })
+      .filter((sense) => sense.partOfSpeech && sense.context && sense.meaning && sense.note);
+
+    if (parsedSenses.length > 0) {
+      onEditSenses(parsedSenses);
+    }
+
+    setIsEditingSenses(false);
+  };
+
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm group/card">
       <div className="flex justify-between items-start mb-4">
         <div>
-          <h3 className="text-2xl font-bold text-gray-900 capitalize inline-flex items-end gap-3">
+          <h3 className="text-2xl font-bold text-gray-900 capitalize inline-flex items-center gap-3 flex-wrap">
             {word.word}
-            <span className="text-sm font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded uppercase tracking-wider mb-1">
-              {word.partOfSpeech}
-            </span>
+            {uniquePartOfSpeechBadges.map((partOfSpeech) => (
+              <span key={partOfSpeech} className="text-sm font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded uppercase tracking-wider">
+                {partOfSpeech}
+              </span>
+            ))}
           </h3>
-          {isEditingTranslation ? (
+          {isEditingSenses ? (
             <form 
               onSubmit={(e) => {
                 e.preventDefault();
-                if (editingTranslationValue.trim()) {
-                  onEditTranslation(editingTranslationValue.trim());
-                }
-                setIsEditingTranslation(false);
+                handleSaveSenses();
               }}
-              className="mt-2 flex items-center gap-2"
+              className="mt-3 space-y-2"
             >
-              <input
-                type="text"
+              <textarea
                 autoFocus
-                value={editingTranslationValue}
-                onChange={(e) => setEditingTranslationValue(e.target.value)}
-                className="flex-1 min-w-[250px] px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:border-indigo-500"
+                value={editingSensesValue}
+                onChange={(e) => setEditingSensesValue(e.target.value)}
+                className="w-full min-h-[120px] px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:border-indigo-500"
+                placeholder="Mỗi dòng: Loại từ | Ngữ cảnh | Nghĩa | Ghi chú"
               />
-              <button type="submit" disabled={!editingTranslationValue.trim()} className="text-xs px-2.5 py-1.5 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50">Lưu</button>
-              <button type="button" onClick={() => setIsEditingTranslation(false)} className="text-xs px-2.5 py-1.5 text-gray-600 hover:bg-gray-200 rounded">Hủy</button>
+              <p className="text-xs text-gray-500">Mỗi dòng theo định dạng: Loại từ | Ngữ cảnh | Nghĩa | Ghi chú</p>
+              <div className="flex items-center gap-2">
+                <button type="submit" disabled={!editingSensesValue.trim()} className="text-xs px-2.5 py-1.5 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50">Lưu</button>
+                <button type="button" onClick={() => setIsEditingSenses(false)} className="text-xs px-2.5 py-1.5 text-gray-600 hover:bg-gray-200 rounded">Hủy</button>
+              </div>
             </form>
           ) : (
-            <div className="flex items-center gap-2 mt-1 group/translation">
-              <p className="text-lg text-gray-700">{word.translation}</p>
+            <div className="mt-2 group/translation">
+              <div className="space-y-2">
+                {word.senses.map((sense, index) => (
+                  <div key={`${sense.context}-${index}`} className="rounded-lg border border-gray-100 bg-gray-50/70 px-3 py-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded uppercase tracking-wide">{sense.partOfSpeech}</span>
+                      <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">{sense.context}</span>
+                      <span className="text-base text-gray-800 font-medium">{sense.meaning}</span>
+                    </div>
+                    <p className="text-sm text-gray-600 mt-1">{sense.note}</p>
+                  </div>
+                ))}
+              </div>
               <button 
-                onClick={() => {
-                  setEditingTranslationValue(word.translation);
-                  setIsEditingTranslation(true);
-                }}
-                className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md opacity-0 group-hover/translation:opacity-100 transition-all"
-                title="Chỉnh sửa nghĩa"
+                onClick={handleStartEditingSenses}
+                className="mt-2 p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md opacity-0 group-hover/translation:opacity-100 transition-all"
+                title="Chỉnh sửa các nghĩa"
               >
                 <Pencil className="w-3.5 h-3.5" />
               </button>
@@ -349,14 +417,43 @@ const WordCard: React.FC<{
             </h4>
             <ul className="space-y-2">
               {word.relatedWords?.length > 0 ? word.relatedWords.map((rw, i) => (
-                <li key={i} className="flex items-center justify-between text-sm py-1">
-                  <span className="font-medium text-gray-800">{rw.word}</span>
-                  <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                <li key={i} className="flex items-center justify-between gap-3 text-sm py-1">
+                  <span className="group/related relative min-w-0">
+                    <span className="font-medium text-gray-800 cursor-help underline decoration-dotted underline-offset-2">
+                      {rw.word}
+                    </span>
+                    <span className="pointer-events-none absolute left-0 top-full z-20 mt-1 w-max max-w-56 rounded-md bg-gray-900 px-2 py-1 text-xs font-medium text-white shadow-lg opacity-0 transition-opacity duration-150 group-hover/related:opacity-100">
+                      {rw.translation}
+                    </span>
+                  </span>
+                  <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded shrink-0">
                     {rw.partOfSpeech}
                   </span>
                 </li>
               )) : (
                 <li className="text-sm text-gray-500">Không tìm thấy họ từ.</li>
+              )}
+           </ul>
+          </div>
+
+          <div>
+             <h4 className="text-sm font-semibold text-gray-900 mb-3 border-b border-gray-100 pb-2">
+              Từ đồng nghĩa (Synonyms)
+            </h4>
+            <ul className="space-y-2">
+              {word.synonyms?.length > 0 ? word.synonyms.map((syn, i) => (
+                <li key={i} className="flex items-start justify-between gap-3 text-sm py-1">
+                  <span className="group/synonym relative min-w-0">
+                    <span className="font-medium text-indigo-700 cursor-help underline decoration-dotted underline-offset-2">
+                      {syn.word}
+                    </span>
+                    <span className="pointer-events-none absolute left-0 top-full z-20 mt-1 w-max max-w-64 rounded-md bg-gray-900 px-2 py-1 text-xs font-medium text-white shadow-lg opacity-0 transition-opacity duration-150 group-hover/synonym:opacity-100 whitespace-normal">
+                      {syn.translation}{syn.note ? ` — ${syn.note}` : ""}
+                    </span>
+                  </span>
+                </li>
+              )) : (
+                <li className="text-sm text-gray-500">Không tìm thấy từ đồng nghĩa phù hợp.</li>
               )}
             </ul>
           </div>

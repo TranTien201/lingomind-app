@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ExampleSentence, GrammarChunk, WordEntry } from '../types';
-import { Loader2, Wand2 } from 'lucide-react';
+import { Loader2, RotateCcw, Wand2 } from 'lucide-react';
 import { AppSettings } from '../useSettings';
 
 async function parseJsonResponse(response: Response) {
@@ -92,6 +92,22 @@ export const AnalyzedSentence: React.FC<Props> = ({ sentence, notebookWords, set
 
   return (
     <div className="space-y-3">
+      <div className="flex justify-end">
+        <button
+          onClick={analyze}
+          disabled={isAnalyzing}
+          className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-md transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+          title="Phân tích lại cấu trúc câu bằng AI"
+        >
+          {isAnalyzing ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <RotateCcw className="w-3.5 h-3.5" />
+          )}
+          Phân tích lại
+        </button>
+      </div>
+
       {/* English Chunks */}
       <div className="flex flex-wrap gap-1.5 items-end">
         {sentence.chunks.map((chunk, i) => {
@@ -120,6 +136,8 @@ export const AnalyzedSentence: React.FC<Props> = ({ sentence, notebookWords, set
           );
         })}
       </div>
+
+      {error && <div className="text-xs text-red-500">{error}</div>}
     </div>
   );
 };

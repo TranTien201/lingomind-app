@@ -17,6 +17,13 @@ export interface ExampleSentence {
 export interface RelatedWord {
   word: string;
   partOfSpeech: string;
+  translation: string;
+}
+
+export interface SynonymWord {
+  word: string;
+  translation: string;
+  note: string;
 }
 
 export interface Collocation {
@@ -24,14 +31,22 @@ export interface Collocation {
   translation: string;
 }
 
+export interface WordSense {
+  partOfSpeech: string;
+  context: string;
+  meaning: string;
+  note: string;
+}
+
 export interface WordEntry {
   id: string;
   word: string;
   partOfSpeech: string;
-  translation: string;
+  senses: WordSense[];
   examples: ExampleSentence[];
   relatedWords: RelatedWord[];
   collocations?: Collocation[];
+  synonyms?: SynonymWord[];
   createdAt: number;
 }
 

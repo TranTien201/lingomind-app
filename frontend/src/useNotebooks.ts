@@ -3,6 +3,37 @@ import { Notebook, WordEntry, ExampleSentence } from "./types";
 
 const LOCAL_STORAGE_KEY = "eng_app_notebooks";
 
+function migrateWordEntry(word: any): WordEntry {
+  const senses = Array.isArray(word?.senses) && word.senses.length > 0
+    ? word.senses
+        .filter((sense: any) => sense?.meaning)
+        .map((sense: any) => ({
+          partOfSpeech: typeof sense.partOfSpeech === "string" && sense.partOfSpeech.trim() ? sense.partOfSpeech.trim() : (typeof word?.partOfSpeech === "string" && word.partOfSpeech.trim() ? word.partOfSpeech.trim() : "other"),
+          context: typeof sense.context === "string" && sense.context.trim() ? sense.context.trim() : "Nghĩa thường gặp",
+          meaning: String(sense.meaning).trim(),
+          note: typeof sense.note === "string" && sense.note.trim() ? sense.note.trim() : "Cách dùng phổ biến",
+        }))
+    : typeof word?.translation === "string" && word.translation.trim()
+      ? [{ partOfSpeech: typeof word?.partOfSpeech === "string" && word.partOfSpeech.trim() ? word.partOfSpeech.trim() : "other", context: "Nghĩa cũ", meaning: word.translation.trim(), note: "Dữ liệu được chuyển từ phiên bản trước" }]
+      : [];
+
+  return {
+    ...word,
+    senses,
+    examples: Array.isArray(word?.examples) ? word.examples : [],
+    relatedWords: Array.isArray(word?.relatedWords) ? word.relatedWords : [],
+    collocations: Array.isArray(word?.collocations) ? word.collocations : [],
+    synonyms: Array.isArray(word?.synonyms) ? word.synonyms : [],
+  };
+}
+
+function migrateNotebook(notebook: any): Notebook {
+  return {
+    ...notebook,
+    words: Array.isArray(notebook?.words) ? notebook.words.map(migrateWordEntry) : [],
+  };
+}
+
 export function useNotebooks() {
   const [notebooks, setNotebooks] = useState<Notebook[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -11,7 +42,8 @@ export function useNotebooks() {
     const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (stored) {
       try {
-        setNotebooks(JSON.parse(stored));
+        const parsed = JSON.parse(stored);
+        setNotebooks(Array.isArray(parsed) ? parsed.map(migrateNotebook) : []);
       } catch (e) {
         console.error("Failed to parse notebooks", e);
       }
@@ -90,7 +122,7 @@ export function useNotebooks() {
     );
   };
 
-  const editWordTranslation = (notebookId: string, wordId: string, newTranslation: string) => {
+  const editWordSenses = (notebookId: string, wordId: string, senses: WordEntry["senses"]) => {
     setNotebooks((current) =>
       current.map((nb) => {
         if (nb.id !== notebookId) return nb;
@@ -98,7 +130,7 @@ export function useNotebooks() {
           ...nb,
           words: nb.words.map((w) => {
             if (w.id !== wordId) return w;
-            return { ...w, translation: newTranslation };
+            return { ...w, senses };
           }),
         };
       })
@@ -126,7 +158,7 @@ export function useNotebooks() {
     renameNotebook,
     addCustomExample,
     deleteWord,
-    editWordTranslation,
+    editWordSenses,
     updateWord,
   };
 }

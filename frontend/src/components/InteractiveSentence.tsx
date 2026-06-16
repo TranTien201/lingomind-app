@@ -2,6 +2,14 @@ import React, { useState, useEffect, useRef } from "react";
 import { WordEntry, ExampleSentence } from "../types";
 import { Loader2 } from "lucide-react";
 
+const getMeaningTargets = (wordEntry: WordEntry) =>
+  wordEntry.senses.flatMap((sense) =>
+    sense.meaning
+      .split(/[,;]/)
+      .map((part) => part.trim().toLowerCase())
+      .filter((part) => part.length > 0)
+  );
+
 // Cache for dynamically fetched words
 const fetchPromiseCache = new Map<string, Promise<WordEntry | null>>();
 
@@ -39,8 +47,7 @@ export const InteractiveSentence: React.FC<InteractiveSentenceProps> = ({ senten
         targetList.push({ target: w.word.trim().toLowerCase(), wordEntry: w });
       }
     } else {
-      // Split translations like "abc, xyz" or "abc; xyz" to match any of them
-      const parts = w.translation.split(/[,;]/).map(s => s.trim().toLowerCase()).filter(s => s.length > 0);
+      const parts = getMeaningTargets(w);
       for (const p of parts) {
         targetList.push({ target: p, wordEntry: w });
       }
@@ -232,7 +239,9 @@ const HoverableWord: React.FC<{
                   {popoverData.partOfSpeech}
                 </span>
               </span>
-              <span className="text-gray-700 text-sm mb-3 block">{popoverData.translation}</span>
+              <span className="text-gray-700 text-sm mb-3 block">
+                {popoverData.senses.slice(0, 2).map((sense) => `${sense.partOfSpeech} · ${sense.context}: ${sense.meaning}`).join(" • ")}
+              </span>
               
               {popoverData.examples && popoverData.examples.length > 0 && (
                 <span className="mt-3 pt-3 border-t border-gray-100 block">
