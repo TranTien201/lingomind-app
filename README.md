@@ -1,24 +1,28 @@
 # LingoMinds AI
 
-Ứng dụng học từ vựng tiếng Anh thông minh được hỗ trợ bởi AI. Tạo sổ tay theo chủ đề, thêm từ vựng, và hệ thống AI sẽ tự động cung cấp loại từ, bản dịch tiếng Việt, ví dụ đa dạng thuộc nhiều chủ đề, họ từ liên quan, và cụm từ cố định (collocations).
+Ứng dụng học từ vựng tiếng Anh thông minh được hỗ trợ bởi AI. Tạo sổ tay theo chủ đề, thêm từ vựng, và hệ thống AI sẽ tự động cung cấp nhiều nghĩa theo ngữ cảnh, ví dụ đa dạng, họ từ liên quan, từ đồng nghĩa, và collocations để bạn học sâu hơn trong từng tình huống sử dụng.
 
 ## Tính năng
 
 - **Tạo sổ tay theo chủ đề** - Tổ chức từ vựng của bạn theo các chủ đề khác nhau (IELTS, Business, Du lịch, ...)
-- **Tra cứu từ vựng với AI** - Nhập một từ tiếng Anh, AI sẽ trả về:
-  - Loại từ (part of speech)
-  - Bản dịch tiếng Việt
+- **Tra cứu từ vựng với AI theo nhiều lớp thông tin** - Nhập một từ tiếng Anh, AI sẽ trả về:
+  - Loại từ chính
+  - Danh sách **nhiều nghĩa / senses** theo ngữ cảnh, gồm: loại từ, context, meaning, note
   - Ví dụ mẫu theo nhiều chủ đề (mỗi ví dụ đi kèm dịch tiếng Việt)
   - Họ từ liên quan (word family) với loại từ tương ứng
+  - Từ đồng nghĩa (synonyms) kèm bản dịch và ghi chú phân biệt
   - Cụm từ cố định / collocations với bản dịch
 - **Phân tích cú pháp câu** - Nhấn nút phép màu (wand) trên từng câu ví dụ để AI phân tích cấu trúc ngữ pháp, chia câu thành các chunk (Noun Phrase, Verb Phrase, ...) với màu sắc trực quan cho cả tiếng Anh và tiếng Việt
-- **Interactive Sentence** - Trong các câu ví dụ, các từ đã có trong sổ tay của bạn được highlight với màu sắc và hover để xem thông tin nhanh (popover). Các từ chưa có trong sổ tay cũng có thể hover để tra cứu nhanh qua AI
+- **Interactive Sentence song ngữ** - Trong các câu ví dụ, các từ đã có trong sổ tay của bạn được highlight với màu sắc và hover để xem thông tin nhanh (popover). Ở phần dịch tiếng Việt, hệ thống cũng cố gắng match các nghĩa trong `senses` để highlight ngược lại. Các từ tiếng Anh chưa có trong sổ tay cũng có thể hover để tra cứu nhanh qua AI
 - **Thêm ví dụ tùy chỉnh** - Tự thêm câu ví dụ bằng tiếng Anh (và tiếng Việt tùy chọn) vào bất kỳ từ nào
-- **Chỉnh sửa bản dịch** - Sửa trực tiếp nghĩa tiếng Việt của từ nếu bạn muốn điều chỉnh
+- **Chỉnh sửa nghĩa trực tiếp** - Sửa trực tiếp toàn bộ danh sách nghĩa (`senses`) của từ theo định dạng từng dòng: loại từ | ngữ cảnh | nghĩa | ghi chú
+- **Đổi tên sổ tay** - Đổi tên notebook trực tiếp ngay trên sidebar
 - **Tìm kiếm** - Lọc nhanh từ vựng trong sổ tay theo từ hoặc nghĩa tiếng Việt
-- **Sidebar có thể resize** - Kéo giãn sidebar theo ý muốn (200px - 600px), đóng/mở trên desktop
+- **Sidebar linh hoạt hơn** - Kéo giãn sidebar theo ý muốn (200px - 600px), đóng/mở trên desktop và overlay riêng trên mobile
 - **Nhiều cấu hình AI** - Tạo và chuyển đổi giữa nhiều cấu hình kết nối AI (Gemini, OpenAI, Grok, LiteLLM)
 - **Auto-discover models** - Tự động tải danh sách model khả dụng từ API của từng provider
+- **Migration dữ liệu cũ** - Tự động migrate dữ liệu từ phiên bản chỉ có `translation` sang cấu trúc mới dùng `senses`
+- **Request logging** - Backend gắn `requestId`, log request/response và thời gian xử lý để dễ debug AI calls
 - **Persistence** - Dữ liệu sổ tay lưu trong localStorage (frontend), cấu hình AI lưu trong JSON file (backend)
 
 ## Kiến trúc
@@ -28,7 +32,7 @@
 │   ├── src/
 │   │   ├── App.tsx              # Component chính: sidebar + notebook detail + settings
 │   │   ├── main.tsx             # Entry point
-│   │   ├── types.ts             # TypeScript types (Notebook, WordEntry, ...)
+│   │   ├── types.ts             # TypeScript types (Notebook, WordEntry, WordSense, SynonymWord, ...)
 │   │   ├── index.css            # Tailwind CSS + fonts
 │   │   ├── useNotebooks.ts      # Custom hook: quản lý sổ tay (localStorage)
 │   │   ├── useSettings.ts       # Custom hook: quản lý cài đặt AI (API)
@@ -66,6 +70,10 @@
 │   ├── routes/
 │   │   ├── aiRoutes.ts                    # POST /api/lookupWord, POST /api/analyzeSentence
 │   │   └── providerConnectionsRoutes.ts   # GET/PUT /api/provider-connections, POST /api/provider-connections/discover-models
+│   ├── logging/
+│   │   ├── requestLoggingMiddleware.ts    # Gắn requestId và log request lifecycle
+│   │   ├── redactSensitiveData.ts         # Ẩn dữ liệu nhạy cảm trước khi log
+│   │   └── TerminalLogger.ts              # Format log output trên terminal
 │   ├── services/
 │   │   └── modelDiscoveryService.ts       # Auto-discover models từ Gemini / OpenAI-compatible APIs
 │   └── storage/
@@ -80,7 +88,7 @@
 1. User nhập từ trong ô tìm kiếm của sổ tay
 2. Frontend gọi `POST /api/lookupWord` với từ + cấu hình AI (provider, model, apiUrl, apiKey)
 3. Backend (`AiService`) resolve provider, chọn model, gọi AI qua provider tương ứng
-4. AI trả về JSON: word, partOfSpeech, translation, examples[], relatedWords[], collocations[]
+4. AI trả về JSON: word, partOfSpeech, senses[], examples[], relatedWords[], collocations[], synonyms[]
 5. Zod validate output → hiển thị Word Card với đầy đủ thông tin
 
 ### Phân tích cú pháp câu (Analyze a sentence)
@@ -93,16 +101,17 @@
 
 ### Interactive Sentence
 
-1. Trong câu ví dụ, từ đã có trong sổ tay được highlight và hover để xem popover (definition + ví dụ)
-2. Từ chưa có trong sổ tay nhưng là tiếng Anh: hover → tự động gọi AI tra từ → hiển thị popover
+1. Trong câu ví dụ tiếng Anh, từ đã có trong sổ tay được highlight và hover để xem popover (senses + ví dụ)
+2. Trong câu dịch tiếng Việt, app dùng các meaning trong `senses` để highlight những cụm nghĩa tương ứng
+3. Từ chưa có trong sổ tay nhưng là tiếng Anh: hover → tự động gọi AI tra từ → hiển thị popover
 
 ### Cấu hình AI (Settings)
 
 1. User click Settings icon → modal mở
-2. Chọn hoặc tạo mới cấu hình (connection)
+2. Chọn, tạo mới, đổi tên hoặc xóa cấu hình (connection)
 3. Cấu hình bao gồm: provider, apiUrl, apiKey, model
 4. Click "Tải danh sách model" → gọi `POST /api/provider-connections/discover-models`
-5. Chọn model từ danh sách → lưu xuống backend (JSON file)
+5. Chọn model từ danh sách → lưu active connection xuống backend (JSON file)
 
 ## Môi trường (Environment Variables)
 
@@ -125,6 +134,8 @@ cp .env.example .env.local
 | `DEFAULT_AI_PROVIDER` | No | Provider mặc định (default: `gemini`) |
 
 \* Bạn cũng có thể cấp API key qua UI Settings thay vì dùng env.
+
+> Với Gemini, UI hiện ưu tiên flow đơn giản hơn: không bắt buộc nhập Base URL trong [`frontend/src/components/SettingsDialog.tsx`](frontend/src/components/SettingsDialog.tsx:26) và có thể dùng key từ backend env hoặc cấu hình lưu trong connection.
 
 ## Cài đặt và Chạy
 
@@ -179,17 +190,32 @@ npm run lint
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/api/lookupWord` | Tra chi tiết từ vựng (word, provider?, model?, apiUrl?, apiKey?) |
+| `POST` | `/api/lookupWord` | Tra chi tiết từ vựng (word, provider?, model?, apiUrl?, apiKey?) → trả về `senses`, `examples`, `relatedWords`, `collocations`, `synonyms` |
 | `POST` | `/api/analyzeSentence` | Phân tích cú pháp câu (english, vietnamese, provider?, model?, apiUrl?, apiKey?) |
 | `GET` | `/api/provider-connections` | Lấy danh sách cấu hình AI đã lưu |
 | `PUT` | `/api/provider-connections` | Lưu danh sách cấu hình AI (activeConnectionId, connections[]) |
 | `POST` | `/api/provider-connections/discover-models` | Tự động tìm model từ provider (provider, apiUrl?, apiKey?) |
 
+## Cấu trúc dữ liệu từ vựng mới
+
+Mỗi từ không còn chỉ có một trường `translation` đơn lẻ. Thay vào đó, app dùng cấu trúc `senses` để mô tả nhiều nghĩa theo ngữ cảnh:
+
+```ts
+interface WordSense {
+  partOfSpeech: string;
+  context: string;
+  meaning: string;
+  note: string;
+}
+```
+
+Ngoài ra, một [`WordEntry`](frontend/src/types.ts:41) hiện có thể chứa thêm `synonyms` và `collocations`, giúp phần hiển thị chi tiết và interactive popover giàu ngữ nghĩa hơn.
+
 ## Provider / Model hỗ trợ
 
 | Provider | Transport | Structured Output | Default Models |
 |---|---|---|---|
-| **Gemini** | Native `@google/genai` SDK + JSON schema | ✅ Native | gemini-3.5-flash, gemini-2.0-flash |
+| **Gemini** | Native `@google/genai` SDK + JSON schema | ✅ Native | gemini-2.5-flash |
 | **OpenAI** | REST `fetch` + JSON mode | ✅ `response_format: json_object` | gpt-4o-mini |
 | **Grok / xAI** | REST `fetch` + JSON mode | ✅ `response_format: json_object` | grok-2-latest |
 | **LiteLLM** | REST `fetch` | ⚠️ Prompt-based (no native JSON mode) | gpt-3.5-turbo |
@@ -205,5 +231,6 @@ npm run lint
 - **AI:** Google Gemini (@google/genai), OpenAI, xAI Grok, LiteLLM
 - **Validation:** Zod 4
 - **Build:** Vite (frontend), esbuild (backend)
-- **Persist:** localStorage (notebooks), file system JSON (provider connections)
+- **Persist:** localStorage (notebooks, có migration dữ liệu cũ), file system JSON (provider connections)
+- **Observability:** request logging với request ID và redaction dữ liệu nhạy cảm
 - **Font:** Inter (body), Space Grotesk (display)
